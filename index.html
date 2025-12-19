@@ -84,7 +84,8 @@
   <input id="ts_hours" placeholder="Hours"><br><br>
   <button onclick="addTimesheet()">Save Entry</button>
 </div>
-  
+
+<!-- APPROVAL -->
 <div id="approveBox" class="box" style="display:none;">
   <h3>Approve Timesheet</h3>
   <input id="ap_workdate" placeholder="Work Date"><br>
@@ -95,7 +96,6 @@
   <button onclick="approveTS('REJECTED')">Reject</button>
 </div>
 
-  
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbzkiZZcQif6kchdQKdMAWwQCLRpoU7PWy2z5lJDKtS161fJagovHQu_IeCdWVQt9YZ-/exec";
 
@@ -104,19 +104,22 @@ let currentRole = "";
 
 /* -------- BASIC UI -------- */
 function show(id) {
-  ["usersBox","clientsBox","tasksBox","assignBox","timesheetBox"]
+  ["usersBox","clientsBox","tasksBox","assignBox","timesheetBox","approveBox"]
     .forEach(x => document.getElementById(x).style.display="none");
   document.getElementById(id).style.display = "block";
 }
 
 /* -------- LOGIN -------- */
 function login() {
+  loginMsg.innerText = "Logging in...";
+
   fetch(API_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "login",
-      email: email.value,
-      password: password.value
+      email: email.value.trim(),
+      password: password.value.trim()
     })
   })
   .then(r => r.json())
@@ -124,8 +127,12 @@ function login() {
     if (d.status === "success") {
       getUserContext();
     } else {
-      loginMsg.innerText = "Invalid login";
+      loginMsg.innerText = "Invalid email or password";
     }
+  })
+  .catch(err => {
+    console.error(err);
+    loginMsg.innerText = "Connection error";
   });
 }
 
@@ -135,7 +142,7 @@ function getUserContext() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "getUserContext",
-      email: email.value
+      email: email.value.trim()
     })
   })
   .then(r => r.json())
@@ -146,15 +153,8 @@ function getUserContext() {
     loginBox.style.display = "none";
     menuBox.style.display = "block";
 
-    // Admin-only
-    if (currentRole !== "Admin") {
-      usersBox.style.display = "none";
-    }
-
-    // Approval only for Admin / Manager
-    if (currentRole !== "Admin" && currentRole !== "Manager") {
-      approveBox.style.display = "none";
-    }
+    if (currentRole !== "Admin") usersBox.style.display = "none";
+    if (currentRole !== "Admin" && currentRole !== "Manager") approveBox.style.display = "none";
   });
 }
 
@@ -190,13 +190,30 @@ function addTimesheet() {
     hours:ts_hours.value });
 }
 
+function approveTS(decision) {
+  post({
+    action:"approveTimesheet",
+    role:currentRole,
+    actor:currentUser.userId,
+    workDate:ap_workdate.value,
+    userId:ap_user.value,
+    taskId:ap_task.value,
+    decision:decision
+  });
+}
+
 function post(payload) {
   fetch(API_URL, {
     method:"POST",
-    body:JSON.stringify(payload)
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
   })
-  .then(r=>r.json())
-  .then(d=>alert(d.status || "Saved"));
+  .then(r => r.json())
+  .then(d => alert(d.status || "Saved"))
+  .catch(err => {
+    console.error(err);
+    alert("Server error");
+  });
 }
 </script>
 

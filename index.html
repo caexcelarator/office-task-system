@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Office Task Management</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    button { margin: 5px; }
+    .box { border: 1px solid #ccc; padding: 10px; margin-top: 10px; }
+  </style>
+</head>
+
+<body>
+
+<h2>Office Task Management System</h2>
+
+<!-- LOGIN -->
+<div id="loginBox" class="box">
+  <h3>Login</h3>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
+  <button onclick="login()">Login</button>
+  <p id="loginMsg"></p>
+</div>
+
+<!-- MENU -->
+<div id="menuBox" class="box" style="display:none;">
+  <h3>Menu</h3>
+  <button onclick="show('usersBox')">Users</button>
+  <button onclick="show('clientsBox')">Clients</button>
+  <button onclick="show('tasksBox')">Task Master</button>
+  <button onclick="show('assignBox')">Task Assignment</button>
+  <button onclick="show('timesheetBox')">Timesheet</button>
+</div>
+
+<!-- USERS -->
+<div id="usersBox" class="box" style="display:none;">
+  <h3>Add User (Admin only)</h3>
+  <input id="u_id" placeholder="User ID"><br>
+  <input id="u_name" placeholder="Name"><br>
+  <input id="u_email" placeholder="Email"><br>
+  <input id="u_pwd" placeholder="Password"><br>
+  <select id="u_role">
+    <option>Admin</option>
+    <option>Manager</option>
+    <option>Staff</option>
+  </select><br><br>
+  <button onclick="addUser()">Save User</button>
+</div>
+
+<!-- CLIENTS -->
+<div id="clientsBox" class="box" style="display:none;">
+  <h3>Add Client</h3>
+  <input id="c_id" placeholder="Client ID"><br>
+  <input id="c_name" placeholder="Client Name"><br><br>
+  <button onclick="addClient()">Save Client</button>
+</div>
+
+<!-- TASK MASTER -->
+<div id="tasksBox" class="box" style="display:none;">
+  <h3>Add Task Master</h3>
+  <input id="t_id" placeholder="Task ID"><br>
+  <input id="t_client" placeholder="Client ID"><br>
+  <input id="t_name" placeholder="Task Name"><br>
+  <input id="t_cat" placeholder="Category"><br><br>
+  <button onclick="addTaskMaster()">Save Task</button>
+</div>
+
+<!-- TASK ASSIGNMENT -->
+<div id="assignBox" class="box" style="display:none;">
+  <h3>Assign Task</h3>
+  <input id="a_id" placeholder="Assignment ID"><br>
+  <input id="a_task" placeholder="Task ID"><br>
+  <input id="a_user" placeholder="Assign To (UserID)"><br>
+  <input id="a_due" placeholder="Due Date"><br><br>
+  <button onclick="assignTask()">Assign</button>
+</div>
+
+<!-- TIMESHEET -->
+<div id="timesheetBox" class="box" style="display:none;">
+  <h3>Timesheet Entry</h3>
+  <input id="ts_date" placeholder="Work Date (dd-mm-yyyy)"><br>
+  <input id="ts_task" placeholder="Task ID"><br>
+  <input id="ts_hours" placeholder="Hours"><br><br>
+  <button onclick="addTimesheet()">Save Entry</button>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/library/d/1qgcT1LDuWsUv5AOX46r1F1cnA0dHT5U46lt7Z2yRdGwBiHeSlPqKFKCj/1";
+
+let currentUser = {};
+let currentRole = "";
+
+/* -------- BASIC UI -------- */
+function show(id) {
+  ["usersBox","clientsBox","tasksBox","assignBox","timesheetBox"]
+    .forEach(x => document.getElementById(x).style.display="none");
+  document.getElementById(id).style.display = "block";
+}
+
+/* -------- LOGIN -------- */
+function login() {
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "login",
+      email: email.value,
+      password: password.value
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status === "success") {
+      getUserContext();
+    } else {
+      loginMsg.innerText = "Invalid login";
+    }
+  });
+}
+
+function getUserContext() {
+  fetch(API_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      action: "getUserContext",
+      email: email.value
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    currentUser = d;
+    currentRole = d.role;
+
+    loginBox.style.display = "none";
+    menuBox.style.display = "block";
+
+    if (currentRole !== "Admin") usersBox.style.display = "none";
+  });
+}
+
+/* -------- API CALLS -------- */
+function addUser() {
+  post({ action:"addUser", role:currentRole, actor:currentUser.userId,
+    userId:u_id.value, name:u_name.value, email:u_email.value,
+    password:u_pwd.value, userRole:u_role.value });
+}
+
+function addClient() {
+  post({ action:"addClient", role:currentRole, actor:currentUser.userId,
+    clientId:c_id.value, clientName:c_name.value });
+}
+
+function addTaskMaster() {
+  post({ action:"addTaskMaster", role:currentRole, actor:currentUser.userId,
+    taskId:t_id.value, clientId:t_client.value,
+    taskName:t_name.value, category:t_cat.value });
+}
+
+function assignTask() {
+  post({ action:"assignTask", role:currentRole, actor:currentUser.userId,
+    assignmentId:a_id.value, taskId:a_task.value,
+    assignedTo:a_user.value, dueDate:a_due.value });
+}
+
+function addTimesheet() {
+  post({ action:"addTimesheet",
+    userId:currentUser.userId,
+    taskId:ts_task.value,
+    workDate:ts_date.value,
+    hours:ts_hours.value });
+}
+
+function post(payload) {
+  fetch(API_URL, {
+    method:"POST",
+    body:JSON.stringify(payload)
+  })
+  .then(r=>r.json())
+  .then(d=>alert(d.status || "Saved"));
+}
+</script>
+
+</body>
+</html>

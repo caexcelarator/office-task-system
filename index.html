@@ -30,6 +30,7 @@
   <button onclick="show('tasksBox')">Task Master</button>
   <button onclick="show('assignBox')">Task Assignment</button>
   <button onclick="show('timesheetBox')">Timesheet</button>
+  <button onclick="show('approveBox')">Approve Timesheet</button>
 </div>
 
 <!-- USERS -->
@@ -83,7 +84,18 @@
   <input id="ts_hours" placeholder="Hours"><br><br>
   <button onclick="addTimesheet()">Save Entry</button>
 </div>
+  
+<div id="approveBox" class="box" style="display:none;">
+  <h3>Approve Timesheet</h3>
+  <input id="ap_workdate" placeholder="Work Date"><br>
+  <input id="ap_user" placeholder="User ID"><br>
+  <input id="ap_task" placeholder="Task ID"><br><br>
 
+  <button onclick="approveTS('APPROVED')">Approve</button>
+  <button onclick="approveTS('REJECTED')">Reject</button>
+</div>
+
+  
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbzkiZZcQif6kchdQKdMAWwQCLRpoU7PWy2z5lJDKtS161fJagovHQu_IeCdWVQt9YZ-/exec";
 
@@ -120,6 +132,7 @@ function login() {
 function getUserContext() {
   fetch(API_URL, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "getUserContext",
       email: email.value
@@ -133,7 +146,15 @@ function getUserContext() {
     loginBox.style.display = "none";
     menuBox.style.display = "block";
 
-    if (currentRole !== "Admin") usersBox.style.display = "none";
+    // Admin-only
+    if (currentRole !== "Admin") {
+      usersBox.style.display = "none";
+    }
+
+    // Approval only for Admin / Manager
+    if (currentRole !== "Admin" && currentRole !== "Manager") {
+      approveBox.style.display = "none";
+    }
   });
 }
 
